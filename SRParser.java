@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.Arrays;
+import java.util.Locale;
 
 class SRParser {
 
@@ -22,6 +23,7 @@ class SRParser {
     String gotoVal;
     char valLHS;
     int lenRHS;
+    boolean shifted;
 
     public SRParser(String[][] grammar, String[][] actionTable, String[][] gotoTable) {
         this.grammar = grammar;
@@ -70,75 +72,80 @@ class SRParser {
     public void parse(String[] inputTokens) {
         this.inputTokens = inputTokens;
         shift();
-        while (!actionStr(action).equals("a")) 
-        {
-            if (actionStr(action).equals("S")) 
-            {
+        while (!actionStr(action).equals("a")) {
+            if (actionStr(action).equals("S")) {
                 shift();
-            }
-            else if (actionStr(action).equals("R")) 
-            {
+            } else if (actionStr(action).equals("R")) {
                 reduce();
-            } 
-            else if (actionStr(action).equals(""))
-            {
+            } else if (actionStr(action).equals("")) {
                 reject();
             }
         }
+        // shift();
+//         accept();
     }
 
-    public void shift() 
-    {   
+    public void shift() {
 
         tempStack = stack.toString();
-        System.out.format("%20s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n",
-                stack.toString(),                           // stack
-                Arrays.toString(sliceInputTokens(currentTokenIdx)),       // input tokens
-                "["+stateSym+","+inputTokens[currentTokenIdx]+"]",// action lookup
-                action,   // action value
-                "",                                 // value of lhs
-                "",                                 // length of rhs
-                "",                           // temp stack
-                "",                                 // goto lookup
-                "",                                 // goto value                    
+        System.out.format("%-20s%25s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n",
+                stack.toString(), // stack
+                Arrays.toString(sliceInputTokens(currentTokenIdx)), // input tokens
+                "[" + stateSym + "," + inputTokens[currentTokenIdx] + "]", // action lookup
+                action, // action value
+                "", // value of lhs
+                "", // length of rhs
+                "", // temp stack
+                "", // goto lookup
+                "", // goto value
                 inputTokens[currentTokenIdx] + actionVal(action), // stack action
-                inputTokens[currentTokenIdx]);                    // parse tree stack
-                stack.push(new PstackEntry(actionVal(action), inputTokens[currentTokenIdx]));
-                if (currentTokenIdx < inputTokens.length - 1)
-                {
-                    currentTokenIdx++;
-                }
-                stateSym = stack.top().stateSym;
-                grammarSym = stack.top().grammarSym;
-                action = action(stateSym, inputTokens[currentTokenIdx]);
+                inputTokens[currentTokenIdx]); // parse tree stack
+
+        stack.push(new PstackEntry(actionVal(action), inputTokens[currentTokenIdx]));
+        if (currentTokenIdx < inputTokens.length - 1) {
+            currentTokenIdx++;
+        }
+        stateSym = stack.top().stateSym;
+        grammarSym = stack.top().grammarSym;
+        action = action(stateSym, inputTokens[currentTokenIdx]);
 
     }
-    
 
     private void reduce() {
+
         int actionVali = actionVali(actionVal(action));
-        valLHS = lhs.charAt(actionVali-1);
-        lenRHS = spaces(rhs[actionVali-1]);
-        System.out.format("%20s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n",
-        stack.toString(),                           // stack
-                Arrays.toString(sliceInputTokens(currentTokenIdx)),             // input tokens
-                "["+stateSym+","+inputTokens[currentTokenIdx]+"]",              // action lookup
-                action,   // action value
-                valLHS,                                                         // value of lhs
-                lenRHS,                                                         // length of rhs
-                tempStack,                                                      // temp stack
-                "["+tempStack.substring(tempStack.length() - 1)+","+valLHS+"]" , // goto lookup
-                gotoVal(tempStack, valLHS, lenRHS),                                     // goto value                    
-                valLHS + gotoVal(tempStack, valLHS, lenRHS),                            // stack action
-                lhs.charAt(actionVali-1) + " " + stack.top().grammarSym);       // parse tree stack
+        valLHS = lhs.charAt(actionVali - 1);
+        lenRHS = spaces(rhs[actionVali - 1]);
+
+        tempStack = stack.toString();
+            for (int i = 0; i < lenRHS; i++) 
+            {
+                // print("length of rhs: " + lenRHS);
+                // print("stack.pop: " + stack.pop());
                 stack.pop();
-                stack.push(new PstackEntry(gotoVal(tempStack, valLHS, lenRHS), String.valueOf(valLHS)));
-                stateSym = stack.top().stateSym;
-                grammarSym = stack.top().grammarSym;
-                // print("tempStack, valLHS, lenRHS, gotoVal(tempStack, valLHS), valLHS + gotoVal(tempStack, valLHS): " + tempStack + ", " + valLHS + ", " + lenRHS + ", " + gotoVal(tempStack, valLHS) + ", " + (valLHS + gotoVal(tempStack, valLHS)));
-                // print("valLHS, lenRHS, actionVali: " + valLHS + ", " + lenRHS + ", " + actionVali);
-                // print("gotoVal(tempStack, valLHS), tempStack, valLHS: " + gotoVal(tempStack, valLHS) + ", " + tempStack + ", " + valLHS);
-                action = action(stateSym, inputTokens[currentTokenIdx]);
+            }
+
+
+        gotoVal = gotoVal(stack.toString(), valLHS, lenRHS);
+
+        System.out.format("%-20s%25s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n",
+                tempStack, // stack
+                Arrays.toString(sliceInputTokens(currentTokenIdx)), // input tokens
+                "[" + stateSym + "," + inputTokens[currentTokenIdx] + "]", // action lookup
+                action, // action value
+                valLHS, // value of lhs
+                lenRHS, // length of rhs
+                stack.toString(), // temp stack
+                "[" + stack.toString().substring(stack.toString().length() - 1) + "," + valLHS + "]", // goto lookup
+                gotoVal, // goto value
+                valLHS + gotoVal, // stack action
+                lhs.charAt(actionVali - 1) + " " + grammarSym); // parse tree stack
+        // stack.push(new PstackEntry(gotoVal, String.valueOf(valLHS)));
+        stack.push(new PstackEntry(gotoVal, String.valueOf(valLHS)));
+        // print("stack: " + stack.toString());
+        stateSym = stack.top().stateSym;
+        grammarSym = stack.top().grammarSym;
+        action = action(gotoVal, inputTokens[currentTokenIdx]);
 
     }
 
@@ -152,7 +159,6 @@ class SRParser {
         System.exit(0);
     }
 
-
     public int spaces(String rhs) {
         int spaceCount = 0;
         for (char c : rhs.toCharArray()) {
@@ -160,39 +166,39 @@ class SRParser {
                 spaceCount++;
             }
         }
-    return spaceCount;
-}
-
-public String[] sliceInputTokens(int i) {
-    String[] temp = new String[inputTokens.length - i];
-    for (int j = 0; j < inputTokens.length - i; j++) {
-        temp[j] = inputTokens[j + i];
+        return spaceCount;
     }
-    
-    return temp;
-}
+
+    public String[] sliceInputTokens(int i) {
+        String[] temp = new String[inputTokens.length - i];
+        for (int j = 0; j < inputTokens.length - i; j++) {
+            temp[j] = inputTokens[j + i];
+        }
+
+        return temp;
+    }
+
+    // public String sliceStack
 
     public String gotoVal(String tempStack, char lhs, int lenRHS) {
+        int idx = tempStack.lastIndexOf(lhs);
+        // print("substring: " + idx);
         String temp = tempStack.substring(tempStack.length() - 1);
-        print("temp: " + temp);
+        // print("gotoValtemp: " + temp);
         int row = Integer.parseInt(temp);
         String l = String.valueOf(lhs);
         // print("lhs:" + lhs);
         if (l.equals("E")) {
             // print("gotoVal: " + gotoTable[row][0]);
             gotoVal = gotoTable[row][0];
-        }
-        else if (l.equals("T")) {
+        } else if (l.equals("T")) {
             // print("gotoVal: " + gotoTable[row][1]);
             gotoVal = gotoTable[row][1];
 
-        }
-        else if (l.equals("F")) {
+        } else if (l.equals("F")) {
             // print("gotoVal: " + gotoTable[row][2]);
             gotoVal = gotoTable[row][2];
-        }
-        else 
-        {
+        } else {
             print("gotoVal: broken....");
         }
         return gotoVal;
@@ -203,6 +209,10 @@ public String[] sliceInputTokens(int i) {
         for (int i = 0; i < terminals.length; i++) {
             if (string.equals(terminals[i])) {
                 action = actionTable[row][i];
+                if (action.equals("accept")) 
+                {
+                    accept();
+                }
                 return action;
             }
         }
@@ -217,7 +227,7 @@ public String[] sliceInputTokens(int i) {
         return actionSplit[actionSplit.length - 1];
     }
 
-        public int actionVali(String action) {
+    public int actionVali(String action) {
 
         if (action.equals("error")) {
             return -1;
@@ -292,8 +302,8 @@ public String[] sliceInputTokens(int i) {
                 { "", "", "" }, // 11
         };
         String[] inputTokens = { "id", "+", "id", "*", "id" };
-        inputTokens = Arrays.copyOf(inputTokens, inputTokens.length+1);
-        inputTokens[inputTokens.length-1] = "$";
+        inputTokens = Arrays.copyOf(inputTokens, inputTokens.length + 1);
+        inputTokens[inputTokens.length - 1] = "$";
         System.out.println("Input: " + Arrays.toString(inputTokens));
 
         SRParser parser = new SRParser(grammar, actionTable, gotoTable);
@@ -306,9 +316,9 @@ public String[] sliceInputTokens(int i) {
             System.out.println(s);
         }
         System.out.println("GoTo choices :\n" + parser.gotoChoices);
-        System.out.format("%20s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n", "     ", "input", "action", "action",
+        System.out.format("%-25s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n", "     ", "input", "action", "action",
                 "value", "length", "temp", "goto", "goto", "stack", "");
-        System.out.format("%20s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n", "Stack", "tokens", "lookup", "value",
+        System.out.format("%-25s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n", "Stack", "tokens", "lookup", "value",
                 "of LHS", "of RHS", "stack", "lookup", "value", "action", "parse tree stack");
         System.out.println(
                 "---------------------------------------------------------------------------------------------------------------------------------------------------------");
@@ -321,5 +331,3 @@ public String[] sliceInputTokens(int i) {
 
     }
 }
-
-
