@@ -7,7 +7,7 @@ support two types of operations.
 last column of the output.
 */
 // // class to represent a parse tree
-abstract public class ParseTree {
+abstract public class ParseTree{
     PrintStream cout = System.out;
 
     public void printTree() {
@@ -17,7 +17,7 @@ abstract public class ParseTree {
     public void printTreeWork(int indentLevel) {
         String outString = "";
         for (int i = 0; i < indentLevel; i++)
-            outString += " ";
+           outString += " ";
         cout.println(outString + this);
     }
 }

@@ -1,8 +1,8 @@
 import java.util.*;
 
-public class ParseStack extends ParseTree{
+public class ParseStack{
 
-    LinkedList<ParseStack> tree = new LinkedList<ParseStack>();
+    LinkedList<String> tree = new LinkedList<String>();
 
     LinkedList<PstackEntry> stk = null;
     

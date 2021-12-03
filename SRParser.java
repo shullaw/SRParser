@@ -1,7 +1,8 @@
-import java.io.*;
+import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.Locale;
-
+import java.util.LinkedList;
+// due to compiling on linux and windows, you may need to:
+// javac --release 8 *.java in order to compile
 class SRParser {
 
     String[][] grammar;
@@ -16,7 +17,7 @@ class SRParser {
     String action;
     String actionValue;
     ParseStack stack;
-    ParseStack parseTreeStack = new ParseStack();
+    ParseStack pts = new ParseStack();
     int currentTokenIdx = 0;
     String stateSym;
     String grammarSym;
@@ -75,26 +76,22 @@ class SRParser {
         shift();
         while (!actionStr(action).equals("a")) {
             if (actionStr(action).equals("S")) {
-                print("shift");
+                // print("shift");
                 shift();
             } else if (actionStr(action).equals("R")) {
-                print("reduce");
+                // print("reduce");
                 reduce();
             } else if (actionStr(action).equals("")) {
                 reject();
             }
         }
-        // shift();
-//         accept();
+        accept();
     }
 
     public void shift() {
-
         tempStack = stack.toString();
-        // parseTreeStack += inputTokens[currentTokenIdx];
-        // parseTreeStack.tree.add(stack);
-        parseTreeStack.push(stack.top());
-        System.out.format("%-20s%25s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n",
+        pts.tree.push(inputTokens[currentTokenIdx]);
+        System.out.format("%-14s%-20s%10s%12s%10s%10s%10s%5s%18s%-7s%-14s\n",
                 stack.toString(), // stack
                 Arrays.toString(sliceInputTokens(currentTokenIdx)), // input tokens
                 "[" + stateSym + "," + inputTokens[currentTokenIdx] + "]", // action lookup
@@ -105,8 +102,7 @@ class SRParser {
                 "", // goto lookup
                 "", // goto value
                 inputTokens[currentTokenIdx] + actionVal(action), // stack action
-                inputTokens[currentTokenIdx]); // parse tree stack
-                
+                pts.tree.toString());   // parse tree stack
         stack.push(new PstackEntry(actionVal(action), inputTokens[currentTokenIdx]));
         if (currentTokenIdx < inputTokens.length - 1) {
             currentTokenIdx++;
@@ -114,7 +110,6 @@ class SRParser {
         stateSym = stack.top().stateSym;
         grammarSym = stack.top().grammarSym;
         action = action(stateSym, inputTokens[currentTokenIdx]);
-
     }
 
 
@@ -123,20 +118,19 @@ class SRParser {
         int actionVali = actionVali(actionVal(action));
         valLHS = lhs.charAt(actionVali - 1);
         lenRHS = spaces(rhs[actionVali - 1]);
-
         tempStack = stack.toString();
-            for (int i = 0; i < lenRHS; i++) 
-            {
-                // print("length of rhs: " + lenRHS);
-                // print("stack.pop: " + stack.pop());
-                // stack.pop();
-                parseTreeStack.push(stack.pop());
-            }
-
+        for (int i = 0; i < lenRHS; i++) 
+        {
+            stack.pop();
+        }
 
         gotoVal = gotoVal(stack.toString(), valLHS, lenRHS);
-        // parseTreeStack += lhs.charAt(actionVali - 1) + " " + grammarSym;
-        System.out.format("%-20s%25s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n",
+        // pts.tree.push(lhs.charAt(actionVali - 1) + " " + grammarSym);        
+        // pts.tree.push("[" + String.valueOf(lhs.charAt(actionVali - 1)) + grammarSym + "]");
+        pts.tree.push(String.valueOf(valLHS));
+        // pts.tree.push(grammarSym);
+        // print("[" + String.valueOf(lhs.charAt(actionVali - 1)) + "]\n");
+        System.out.format("%-14s%-20s%10s%12s%10s%-5s%-10s%-13s%-7s%-15s%-10s\n",
                 tempStack, // stack
                 Arrays.toString(sliceInputTokens(currentTokenIdx)), // input tokens
                 "[" + stateSym + "," + inputTokens[currentTokenIdx] + "]", // action lookup
@@ -147,16 +141,14 @@ class SRParser {
                 "[" + stack.toString().substring(stack.toString().length() - 1) + "," + valLHS + "]", // goto lookup
                 gotoVal, // goto value
                 valLHS + gotoVal, // stack action
-                lhs.charAt(actionVali - 1) + " " + grammarSym); // parse tree stack
-                // parseTreeStack.tree);
+                // lhs.charAt(actionVali - 1) + " " + grammarSym); // parse tree stack
+                pts.tree.toString());
+                // pts.tree.pop();
 
-        // stack.push(new PstackEntry(gotoVal, String.valueOf(valLHS)));
         stack.push(new PstackEntry(gotoVal, String.valueOf(valLHS)));
-        // print("stack: " + stack.toString());
         stateSym = stack.top().stateSym;
         grammarSym = stack.top().grammarSym;
         action = action(gotoVal, inputTokens[currentTokenIdx]);
-
     }
 
     private void reject() {
@@ -166,7 +158,23 @@ class SRParser {
 
     private void accept() {
         print("Accepted; parsing complete");
-        print(parseTreeStack.stk);
+        char tab = ' ';
+
+        for (int i = 0; i < pts.tree.size(); i++) {
+            print(pts.tree.get(i));
+            print(tab);
+            System.out.print(tab);
+            for (int j = 0; j < i; j++) {
+                if (!pts.tree.get(i).equals("id"))
+                {
+                    System.out.print(tab);
+                }
+            }
+        }
+            // System.out.print(tab);
+            // print(pts.tree.get(i));
+        
+        print(pts.tree);
         System.exit(0);
     }
 
@@ -213,6 +221,45 @@ class SRParser {
         return gotoVal;
     }
 
+    public void shiftOps()
+    {
+        LinkedList<String> ops = new LinkedList<String>();
+        for (int i = 0; i < pts.tree.size(); i++)
+        {
+            if (pts.tree.get(i).equals("+") || pts.tree.get(i).equals("-") || pts.tree.get(i).equals("*") || pts.tree.get(i).equals("/"))
+            {
+                ops.push(pts.tree.get(i));
+                pts.tree.set(i, "op");
+            }
+        }
+        for (int i = 0; i < pts.tree.size(); i++)
+        {
+            if (pts.tree.get(i).equals("op"))
+            {
+                pts.tree.set(i, ops.pop());
+            }
+        }
+    }
+
+    public String setBrackets()
+    {
+        String temp = "[";
+        for (int i = 0; i < pts.tree.size(); i++)
+        {
+            temp += pts.tree.get(i);
+            if (pts.tree.get(i).equals("id"))
+            {
+                temp+= "]";
+            }
+            else
+            {
+                temp += "[";
+            }
+        }
+        temp += "]";
+        return temp;
+    }
+
     public String action(String token, String string) {
         int row = Integer.parseInt(token);
         for (int i = 0; i < terminals.length; i++) {
@@ -220,7 +267,8 @@ class SRParser {
                 action = actionTable[row][i];
                 if (action.equals("accept")) 
                 {
-                    System.out.format("%-20s%25s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n",
+                    shiftOps();
+                    System.out.format("%-14s%-20s%10s%10s%10s%10s%10s%10s%5s%8s%-18s\n",
                 stack.toString(), // stack
                 Arrays.toString(sliceInputTokens(currentTokenIdx)), // input tokens
                 "[" + stateSym + "," + inputTokens[currentTokenIdx] + "]", // action lookup
@@ -231,8 +279,8 @@ class SRParser {
                 "", // goto lookup
                 "", // goto value
                 "", // stack action
-                ""); // parse tree stack
-                    accept();
+                pts.tree.toString()); // parse tree stack
+                    // accept();
                 }
                 return action;
             }
@@ -274,9 +322,16 @@ class SRParser {
         return tokSplit;
     }
 
-    // return true if the token is a nonterminal
     public boolean isTerminal(String token) {
         for (String t : terminals) {
+            if (token.equals(t)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean isOp(String token) {
+        for (String t : "+*$".split("")) {
             if (token.equals(t)) {
                 return true;
             }
@@ -337,9 +392,9 @@ class SRParser {
             System.out.println(s);
         }
         System.out.println("GoTo choices :\n" + parser.gotoChoices);
-        System.out.format("%-25s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n", "     ", "input", "action", "action",
+        System.out.format("%-14s%-20s%10s%13s%10s%10s%10s%10s%7s%10s%20s\n", "     ", "input", "action", "action",
                 "value", "length", "temp", "goto", "goto", "stack", "");
-        System.out.format("%-25s%20s%10s%10s%10s%10s%10s%10s%10s%15s%20s\n", "Stack", "tokens", "lookup", "value",
+        System.out.format("%-14s%-20s%10s%13s%10s%10s%10s%10s%7s%10s%20s\n", "Stack", "tokens", "lookup", "value",
                 "of LHS", "of RHS", "stack", "lookup", "value", "action", "parse tree stack");
         System.out.println(
                 "---------------------------------------------------------------------------------------------------------------------------------------------------------");
